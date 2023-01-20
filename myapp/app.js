@@ -382,7 +382,7 @@ console.log(fruits);*/
 
 // //splice 11//
 // var a = ["a", "b", "c", "d", "e"];
-// var abs = a.splice(2,1);
+// var abs = a.splice(1,1);
 // console.log(abs);
 
 
@@ -418,8 +418,8 @@ console.log(fruits);*/
 
 
   //last index 16//
-  // var a = ["a", "b", "c", "d", "c"];
-  // var abs =  a.lastIndexOf("c");
+  // var a = ["a", "b", "a", "d", "c"];
+  // var abs =  a.lastIndexOf("a");
   // console.log(abs);
 
 //some 18//
@@ -455,8 +455,8 @@ console.log(fruits);*/
 
 //copywith 22//
 // const fruits = ["Banana", "Orange", "Apple", "Mango"];
-// fruits.copyWithin(2, 0);
-// console.log(fruits.copyWithin(2, 0));
+// fruits.copyWithin(3, 0);
+// console.log(fruits.copyWithin(3, 0));
 
 
 //filter 23//
@@ -604,11 +604,11 @@ console.log(fruits);*/
 //   console.log("nice");
 // }
 
-myString = "this is my string";
-for (let char of myString){
-console.log(myString[char])};
+// myString = "this is my string";
+// for (let char in myString){
+// console.log(myString[char])};
 
-people = ["shweta", "shikha"];
-for (let name in people){
-  console.log(name)
-}
+// people = ["shweta", "shikha"];
+// for (let name of people){
+//   console.log(name)
+// }
