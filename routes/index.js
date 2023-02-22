@@ -1,9 +1,12 @@
-var express = require('express');
+var express = require("express");
+const AuthController = require("../../controllers/api/AuthController");
+
 var router = express.Router();
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
-});
+router.post("/mobile", AuthController.mobile);
+router.post("/verify-otp", AuthController.verifyOtp);
+router.post("/complete-profile", AuthController.completeprofile);
+router.post("/login", AuthController.login);
+router.post("/add-vehicle", AuthController.addvehicle);
 
 module.exports = router;
