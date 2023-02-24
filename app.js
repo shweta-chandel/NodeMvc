@@ -1,15 +1,20 @@
 const mysql = require('mysql');
 const express = require('express');
-const path =require("path");
+const path = require("path");
 const bodyparser = require('body-parser');
 const app = express();
 app.use(bodyparser.json());
 var validator = require("email-validator");
 const bcrypt = require('bcrypt');
 const otp = require('otplib');
-
- otp.authenticator.options = { crypto: require('crypto') };
-const secret = otp.authenticator.generateSecret();
+const axios = require('axios');
+const otpGenerator = require('otp-generator')
+const addressvalidator  = require('address-validator')
+let csc = require('country-state-city').default;
+let Country = require('country-state-city').Country;
+let State = require('country-state-city').State;
+const jwt = require('jsonwebtoken');
+const jwtToken = require('./helper/jwtToken');
 
 const conn = mysql.createConnection({
   host: 'localhost',
@@ -18,21 +23,18 @@ const conn = mysql.createConnection({
   database: 'carWasher',
   multipleStatements: true
 });
-conn.connect((err) =>{
-  if(err) throw err;
+conn.connect((err) => {
+  if (err) throw err;
   console.log('Mysql Connected...');
 });
 
-
-app.get('/',(req, res) => {
-  let sql = "SELECT * FROM mobile";
+app.get('/', (req, res) => {
+  let sql = "SELECT * FROM profile";
   let query = conn.query(sql, (err, results) => {
-    if(err) throw err;
+    if (err) throw err;
     res.send(results)
   });
 });
-
-
 
 app.post('/register', (req, res) => {
   console.log(req.body)
@@ -40,20 +42,19 @@ app.post('/register', (req, res) => {
   var password = req.body.password;
   const confirm = req.body.confirm;
   let data;
-  if (!email|| !password) {
-  return res.send('Please provide email and password');
+  if (!email || !password) {
+    return res.send('Please provide email and password');
   }
- var  isEmail = validator.validate(email);
-  if(!isEmail){
+  var isEmail = validator.validate(email);
+  if (!isEmail) {
     return res.send('Please insert correct email')
   }
   if (confirm !== password) {
     res.send('Password does not match');
   }
-
- bcrypt.hash(password, 10, function(err, hash) {
+  bcrypt.hash(password, 10, function (err, hash) {
     password = hash;
-    data = {email, password}
+    data = { email, password }
     conn.query("INSERT INTO register SET?", data, (err, results) => {
       if (err) {
         return res.send("Failed");
@@ -64,105 +65,124 @@ app.post('/register', (req, res) => {
     });
   });
 })
-  
 
-
-
-app.post('/mobile', (req, res) => {
-const mobile = req.body.mobile;
-console.log('22222222222',mobile)
-const otp = Math.floor(Math.random() * 100000);
-conn.query(`INSERT INTO profile (mobile, otp) VALUES ('${mobile}', '${otp}')`, (error, results) => {
-  if (error) throw error;
-  console.log('OTP generated and saved to database');
-});
+app.post('/mobile', async (req, res) => {
+  const mobile = req.body.mobile;
+  const OTP = otpGenerator.generate(5, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true });
+  const sendOTP = await axios
+    .get(`http://cloudsms.digialaya.com/ApiSmsHttp?UserId=sms@fintranxect.com&pwd=pwd2022&Message=${OTP}%20is%20verification%20otp%20for%20finnit.com.%20OTPs%20are%20SECRET.%20DO%20NOT%20disclose%20it%20to%20anyone.%20FINTRANXECT&Contacts=91${mobile}&SenderId=FTLAPP&ServiceName=SMSTRANS&MessageType=1&StartTime=&DLTTemplateId=1707166903059048617`).then((res) => {
+      if (res.data.status === 'success') {
+        conn.query(`INSERT INTO profile (mobile, otp) VALUES ('${mobile}', '${OTP}')`, (error, results) => {
+          if (error){
+            console.log('error',error)
+          }
+          else {
+            return sendOTP
+          }
+        });
+      }
+    })
+  // await axios
+  // .get(`https://smtlabs.org/api/sendOTP/${OTP}/${mobile}`)
+  // console.log('111111',sendOTP)
+    res.status(200).json({'message':'Send OTP SuccessFully'})
 })
 
 
-app.post('/profile', (req,res) => {
-  console.log(req.body)
-  const full_name = req.body.full_name;
-  const email = req.body.email;
-  const mobile = req.body.mobile;
-  const otp =req.body.otp;
-  const address = req.body.address;
-  const building = req.body.building;
-  const society = req.body.society;
-  const state =req.body.state;
-  const city = req.body.city;
-  const pin =req.body.pin;
-  const data = { full_name, email, mobile, otp, address, building, society, state, city, pin}
-  //mobile = mobile.replace(/\D/g, '');
-//   if (!full_name || !email|| !mobile) {
-//     console.log(full_name)
-//     return res.send('Please provide major requirement');
-//     }
-//   var  isEmail = validator.validate(email);
-//   if(!isEmail){
-//     return res.send('Please insert correct email')
-//   }
-//   if (mobile.length == 10) {
-//     return true;
-// }
-// console.log("Invalid phone number.");
-// return false;
-// })
-  conn.query("INSERT INTO profile SET?", data, (err, results) => {
-    if (err) {
-      return res.send("Failed");
-    }
+app.post('/verifyOtp', async(req, res) => {
+  const otp = req.body.otp;
+  const CurrentTime = new Date();
+  const sql = `SELECT * FROM profile WHERE otp=${otp}`;
+  await conn.query(sql, (err, results) => {
+    if (err) throw err;
     else {
-      return res.send("success");
+      // console.log('results',results)
+      const token = jwt.sign({ userId : results[0].id }, 'qwertyuiop', { expiresIn: '24h' })
+      res.status(200).json({ 'message': 'Otp Verify SuccessFully', token })
     }
   });
 })
 
 
+app.post('/profile',jwtToken.validateToken, (req, res) => {
+  const userId = req.userId;
+  // console.log(req.userId);
+  const full_name = req.body.full_name;
+  const email = req.body.email;
+  const mobile = req.body.mobile;
+  const address = req.body.address;
+  const building = req.body.building;
+  const society = req.body.society;
+  const state = req.body.state;
+  const city = req.body.city;
+  const pincode =  req.body.pincode;
+  const pincodeRegex = /^\d{6}$/;
+  const cityRegex = /^[a-zA-Z\s-]+$/;
+  var regex = /^[A-Za-z]+$/;
+  
+  const data = { full_name, email, mobile, address, building, society, state, city, pincode }
+  if (!full_name || !email) {
+    console.log(full_name)
+    return res.send('Please provide major requirement');
+  }
+   if (!full_name.match(regex)) {
+    return res.send('full name should be letters only.');
+   }
+  var isEmail = validator.validate(email);
+  if (!isEmail) {
+    return res.send('Please insert correct email')
+  } 
+  var isState =State.getStateByCodeAndCountry(state, 'IN');
+  if(!isState){
+    res.send("state dosnt exist")  
+  }
+//   const isCityValid = cityRegex.test(city);
+//   const isPincodeValid = pincodeRegex.test(pincode);
+//  if (!isCityValid){
+//     res.send("city dosnt exist")
+//  }if (!isPincodeValid)
+//  console.log(isPincodeValid)
+//   {
+//     res.send("wrong pincode")
+//  }
+//   return isCityValid && isPincodeValid;
+// }
+// )
+  // conn.query("SELECT * FROM profile WHERE id = ?", [userId], function (err, rows) {
+  //   if (rows.length > 0) {
+  //     return res.send("mobile exist")
+  //   }
+  //   else {
+  //     return res.send("not exist");
+  //   }
+  // })
+conn.query(`UPDATE profile set full_name  = ?,email = ?,address = ?, building =?,society =?, state = ?, city  =?, pincode =?  where id =${userId}`, [full_name,email,address,building,society,state,city,pincode, mobile], (err, results) => {
+  if (!err) {
+    console.log(err)
+    return res.send("profile updated")
+  }
+  else {
+    return res.send(err);
+  }
+})
+})
+
+
+
+app.post('/login', (req, res) => {
+  const mobile = req.body.mobile;
+  conn.query("SELECT * FROM profile WHERE mobile = ?", [mobile], function (err, rows) {
+    if (rows.length > 0) {
+      return res.send("logged in")
+    }
+    else {
+      return res.send("not found");
+    }
+  })
+})
 
 
 
 
 
-
-
-// app.post('/login', (req, res) => {
-//   console.log(req.body)
-//   const email = req.body.email;
-//   const password = req.body.password;
-//   const data = {email, password};
-//   conn.query("SELECT * FROM register WHERE email = ? AND password = ?", [email, password], function (err, rows) {
-//     if (rows.length > 0) {
-//       return res.send("logged in")
-//     }
-//     else {
-//       return res.send("not found");
-//     }
-//   })
-// })
-
-// app.post('/forgotpassword', (req, res) => {
-//   const email = req.body.email;
-//   var newpassword = req.body.newpassword;
-//   conn.query(`SELECT * FROM register WHERE email = "${email}"`, (err, results) => {
-//     if (!err) {
-//       if (results.length != 0) {
-//         conn.query('UPDATE register set password = ? where email =?', [newpassword, email], (err, results) => {
-//           if (!err) {
-//             return res.send("forget password updated")
-//           }
-//           else {
-//             return res.send(err);
-//           }
-//         })
-//       } else {
-//         return res.send("user not found cant updated forget password");
-//       }
-//     } else {
-//       return res.send(err);
-//     }
-//   })
-// })
-
-
-
-app.listen(3000, () => console.log('server'));
+app.listen(4001, () => console.log('server'));
