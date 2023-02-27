@@ -1,10 +1,9 @@
-const router = require('express').Router();
-const UserController = require('../../Controller/UserController');
-console.log(UserController)
-router.post("/mobile", UserController.mobile);
-router.post("/verify-otp", AuthController.verifyOtp);
-router.post("/complete-profile", AuthController.completeprofile);
-router.post("/login", AuthController.login);
-router.post("/add-vehicle", AuthController.addvehicle);
+const express = require('express');
+const app = express();
+const customerRouter = require('./router/customerRoute');
+const adminRouter = require('./router/adminRouter');
 
-module.exports = router;
+app.use('/customer', customerRouter);
+app.use('/admin', adminRouter);
+
+module.exports = app;
