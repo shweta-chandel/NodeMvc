@@ -39,37 +39,8 @@ app.get('/', (req, res) => {
   });
 });
 
-app.post('/register', (req, res) => {
-  console.log(req.body)
-  const email = req.body.email;
-  var password = req.body.password;
-  const confirm = req.body.confirm;
-  let data;
-  if (!email || !password) {
-    return res.send('Please provide email and password');
-  }
-  var isEmail = validator.validate(email);
-  if (!isEmail) {
-    return res.send('Please insert correct email')
-  }
-  if (confirm !== password) {
-    res.send('Password does not match');
-  }
-  bcrypt.hash(password, 10, function (err, hash) {
-    password = hash;
-    data = { email, password }
-    conn.query("INSERT INTO register SET?", data, (err, results) => {
-      if (err) {
-        return res.send("Failed");
-      }
-      else {
-        return res.send("success");
-      }
-    });
-  });
-})
 
-app.post('/mobile', async (req, res) => {
+app.post('/register', async (req, res) => {
   const mobile = req.body.mobile;
   const OTP = otpGenerator.generate(5, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true });
   const sendOTP = await axios
@@ -107,7 +78,7 @@ app.post('/verifyOtp', async(req, res) => {
 })
 
 
-app.post('/profile',jwtToken.validateToken, (req, res) => {
+app.post('/complitProfile',jwtToken.validateToken, (req, res) => {
   const userId = req.userId;
   // console.log(req.userId);
   const full_name = req.body.full_name;
@@ -139,26 +110,26 @@ app.post('/profile',jwtToken.validateToken, (req, res) => {
   if(!isState){
     res.send("state dosnt exist")  
   }
-//   const isCityValid = cityRegex.test(city);
-//   const isPincodeValid = pincodeRegex.test(pincode);
-//  if (!isCityValid){
-//     res.send("city dosnt exist")
-//  }if (!isPincodeValid)
-//  console.log(isPincodeValid)
-//   {
-//     res.send("wrong pincode")
-//  }
-//   return isCityValid && isPincodeValid;
-// }
-// )
-  // conn.query("SELECT * FROM profile WHERE id = ?", [userId], function (err, rows) {
-  //   if (rows.length > 0) {
-  //     return res.send("mobile exist")
-  //   }
-  //   else {
-  //     return res.send("not exist");
-  //   }
-  // })
+  const isCityValid = cityRegex.test(city);
+  const isPincodeValid = pincodeRegex.test(pincode);
+ if (!isCityValid){
+    res.send("city dosnt exist")
+ }if (!isPincodeValid)
+ console.log(isPincodeValid)
+  {
+    res.send("wrong pincode")
+ }
+  return isCityValid && isPincodeValid;
+}
+)
+  conn.query("SELECT * FROM profile WHERE id = ?", [userId], function (err, rows) {
+    if (rows.length > 0) {
+      return res.send("mobile exist")
+    }
+    else {
+      return res.send("not exist");
+    }
+  })
 conn.query(`UPDATE profile set full_name  = ?,email = ?,address = ?, building =?,society =?, state = ?, city  =?, pincode =?  where id =${userId}`, [full_name,email,address,building,society,state,city,pincode, mobile], (err, results) => {
   if (!err) {
     console.log(err)
@@ -168,9 +139,6 @@ conn.query(`UPDATE profile set full_name  = ?,email = ?,address = ?, building =?
     return res.send(err);
   }
 })
-})
-
-
 
 app.post('/login', (req, res) => {
   const mobile = req.body.mobile;
@@ -185,7 +153,7 @@ app.post('/login', (req, res) => {
 })
 
 app.get('/getProfile', (req, res) => {
-  let sql = "SELECT * FROM profile where id = ?";
+  let sql = "SELECT * FROM profile where id = 24";
   let query = conn.query(sql, (err, results) => {
     if (err) throw err;
     res.send(results)
@@ -213,7 +181,7 @@ console.log(req.body)
   const vehicle_color = req.body.vehicle_color;
   const license_num = req.body.license_num;
   const parking_num = req.body.parking_num;
-  const data = { vehicle_type, image, vehicle_model, vehicle_color, license_num, parking_num }
+  const data = { vehicle_type, vehicle_model, vehicle_color, license_num, parking_num }
   conn.query("INSERT INTO customer_vehicle SET?", data, (err, results) => {
     if (err) {
       console.log(err);
