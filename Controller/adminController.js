@@ -1,4 +1,10 @@
-app.post('/adminLogin', (req, res) => {
+const jwt = require('jsonwebtoken');
+const jwtToken = require('./helper/jwtToken');
+
+
+
+
+module.exports.adminLogin = async(req,res) => {
     console.log(req.body)
     const email = req.body.email;
     var password = req.body.password;
@@ -17,6 +23,7 @@ app.post('/adminLogin', (req, res) => {
     bcrypt.hash(password, 10, function (err, hash) {
       password = hash;
       data = { email, password }
+      
       conn.query("INSERT INTO register SET?", data, (err, results) => {
         if (err) {
           return res.send("Failed");
@@ -26,7 +33,7 @@ app.post('/adminLogin', (req, res) => {
         }
       });
     });
-  })
+  }
 
 
  app.post('/vehilceCategory', (req, res) => {

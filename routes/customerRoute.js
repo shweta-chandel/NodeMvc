@@ -9,8 +9,5 @@ app.post('/login',customerController.login);
 app.get('/getProfile',jwtToken.validateToken, customerController.getProfile);
 app.post('/complitProfile', jwtToken.validateToken, customerController.complitProfile);
 app.get('/getVehilceType', jwtToken.validateToken, customerController.getVehilceType);
-app.get('/getState', customerController.getState);
-app.get('/getCity/:stateID', customerController.getCity);
-app.post('/getPincode', customerController.getPincode);
 app.post('/addVehilcle', customerController.addVehilcle);
 module.exports = app;
